@@ -21,17 +21,19 @@ std::vector<Vector4> ClipEngine::clipVertexes(const std::vector<Vector4> &vertex
             bool isFullyInside = true;
 
             for (size_t j = 0; j < 3; ++j) {
-                isFullyInside = isFullyInside && isInsideClippingSquare(input[i - 2 + j], axises);
+                isFullyInside = isFullyInside && isInsideClippingSquare(input[(i-2) + j], axises);
             }
 
             if (isFullyInside) {
                 for (size_t j = 0; j < 3; ++j) {
-                    output.push_back(input[i - 2 + j]);
+                    output.push_back(input[(i-2) + j]);
                 }
                 continue;
             }
 
             auto clippedPolygon = clipSutherlandHodgman({input[i-2], input[i-1], input[i]}, axises);
+
+            // TODO Triangulate clippedPolygon and push vertexes to output
         }
     }
 
@@ -46,7 +48,7 @@ bool ClipEngine::isInsideClippingSquare(Vector4 vertex, const std::vector<size_t
 Vector4 ClipEngine::getIntersection(Vector4 vertexA, Vector4 vertexB, Vector4 planeA, Vector4 planeB, const std::vector<size_t> &axises) {
     Vector4 intersection;
 
-    // TODO How to handle calculating intersection when vertexA.w() != vertexB.w() ?
+    // TODO How to calculate intersection when vertexA.w() != vertexB.w() ?
 
     return intersection;
 }
@@ -69,6 +71,7 @@ std::vector<Vector4> ClipEngine::clipSutherlandHodgman(const std::vector<Vector4
             auto& va = polygon[i];
             auto& vb = polygon[(i+1) % polygon.size()];
 
+            // TODO Replace isInsideClippingSquare with line-plane orientation checking function ?
             if (isInsideClippingSquare(va, axises)) {
                 if (isInsideClippingSquare(vb, axises)) {
                     output.push_back(vb);

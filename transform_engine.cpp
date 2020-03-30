@@ -128,6 +128,9 @@ void TransformEngine::setPerspective(double fovy, double zNear, double zFar) {
 }
 
 void TransformEngine::run() {
+    transformedVertexes.clear();
+    transformedVertexes.resize(modelVertexes.size());
+    
     if (modelVertexes.empty()) {
         return;
     }
@@ -136,26 +139,23 @@ void TransformEngine::run() {
         getRotationMatrix(viewRotation.x(), viewRotation.y(), viewRotation.z()) *
         getTranslationMatrix(viewTranslation.x(), viewTranslation.y(), viewTranslation.z());
 
-    transformedVertexes.clear();
-    transformedVertexes.resize(modelVertexes.size());
-
-    for (size_t i = 0; i < modelVertexes.size(); ++i) {
+    for (size_t i = 0; i < transformedVertexes.size(); ++i) {
         transformedVertexes[i] = transformMatrix * modelVertexes[i];
     }
 
-    for (size_t i = 0; i < modelVertexes.size(); ++i) {
+    for (size_t i = 0; i < transformedVertexes.size(); ++i) {
         transformedVertexes[i] = transformMatrix * modelVertexes[i];
     }
 
     transformedVertexes = clipEngine.clipVertexes(transformedVertexes);
 
-    for (size_t i = 0; i < modelVertexes.size(); ++i) {
+    for (size_t i = 0; i < transformedVertexes.size(); ++i) {
         for (size_t j = 0; j < 4; ++j) {
             transformedVertexes[i][j] /= transformedVertexes[i].w();
         }
     }
 
-    for (size_t i = 0; i < modelVertexes.size(); ++i) {
+    for (size_t i = 0; i < transformedVertexes.size(); ++i) {
         transformedVertexes[i].x() = (1 + transformedVertexes[i].x()) * viewWidth / 2;
         transformedVertexes[i].y() = (1 + transformedVertexes[i].y()) * viewHeight / 2;
         transformedVertexes[i].z() = (1 + transformedVertexes[i].z()) * (zFar - zNear) / 2;

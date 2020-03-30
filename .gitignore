@@ -1,5 +1,8 @@
-# IDE
+# IDE files
 /.vscode
 
-# Build
+# Build files
 /build
+
+# Private files
+/private

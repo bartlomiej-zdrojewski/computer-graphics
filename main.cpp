@@ -181,16 +181,17 @@ double toDegrees(double radians) {
 
 sf::VertexArray toVertexArray(std::vector<Vector4> vertexes) {
     sf::VertexArray vertexArray;    
-
-    vertexArray.resize(vertexes.size());
     vertexArray.setPrimitiveType(sf::PrimitiveType::Lines);
 
     for (size_t i = 2; i < vertexes.size(); i = i + 3) {
         for (size_t j = 0; j < 3; ++j) {
-            vertexArray.append(sf::Vertex(sf::Vector2f(vertexes[i-2+j%3].x(), vertexes[i-2+j%3].y()), sf::Color::White));
-            vertexArray.append(sf::Vertex(sf::Vector2f(vertexes[i-2+(j+1)%3].x(), vertexes[i-2+(j+1)%3].y()), sf::Color::White));
+            size_t va = (i-2) + j;
+            size_t vb = (i-2) + (j+1) % 3;
+
+            vertexArray.append(sf::Vertex(sf::Vector2f(vertexes[va].x(), vertexes[va].y()), sf::Color::White));
+            vertexArray.append(sf::Vertex(sf::Vector2f(vertexes[vb].x(), vertexes[vb].y()), sf::Color::White));
         }
     }
-
+    
     return vertexArray;
 }
