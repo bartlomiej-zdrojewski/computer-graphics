@@ -4,6 +4,7 @@
 #include <vector>
 #include "clip_engine.h"
 #include "transform.h"
+#include "vertex.h"
 
 class TransformEngine {
     
@@ -11,13 +12,13 @@ public:
 
     TransformEngine();
 
-    void loadModelFromVertexArray(std::vector<Vector4> &vertexArray);
+    void loadModelFromVertexArray(std::vector<Vertex> &vertexArray);
     bool loadModelFromBuffer(const std::string &buffer);
     bool loadModelFromFile(const std::string &filePath);
     void clearModel();
 
-    double getViewWidth();
-    double getViewHeight();
+    double getViewWidth() const;
+    double getViewHeight() const;
     void setViewSize(double viewWidth, double viewHeight);
 
     Vector4 getViewTranslation() const;
@@ -34,7 +35,7 @@ public:
     void setPerspective(double fovy, double zNear, double zFar);
 
     void run();
-    std::vector<Vector4> getTransformedVertexes() const;
+    const std::vector<Vertex>& getTransformedVertexes() const;
 
 private:
 
@@ -45,8 +46,8 @@ private:
     Vector4 viewRotation;
     double fovy, zNear, zFar;
 
-    std::vector<Vector4> modelVertexes;
-    std::vector<Vector4> transformedVertexes;
+    std::vector<Vertex> modelVertexes;
+    std::vector<Vertex> transformedVertexes;
 };
 
 #endif

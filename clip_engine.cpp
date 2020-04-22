@@ -1,8 +1,8 @@
 #include <algorithm>
 #include "clip_engine.h"
 
-std::vector<Vector4> ClipEngine::clipVertexes(const std::vector<Vector4> &vertexes) {
-    std::vector<Vector4> input, output = vertexes;
+std::vector<Vertex> ClipEngine::clipVertexes(const std::vector<Vertex> &vertexes) const {
+    std::vector<Vertex> input, output = vertexes;
     const size_t projections[] = {3, 5, 6}; // (0,1,1), (1,0,1), (1,1,0)
     
     for (const auto& projection : projections) {
@@ -21,7 +21,7 @@ std::vector<Vector4> ClipEngine::clipVertexes(const std::vector<Vector4> &vertex
             bool isFullyInside = true;
 
             for (size_t j = 0; j < 3; ++j) {
-                isFullyInside = isFullyInside && isInsideClippingSquare(input[(i-2) + j], axises);
+                isFullyInside = isFullyInside && isInsideClippingSquare(input[(i-2) + j].position, axises);
             }
 
             if (isFullyInside) {
@@ -31,7 +31,7 @@ std::vector<Vector4> ClipEngine::clipVertexes(const std::vector<Vector4> &vertex
                 continue;
             }
 
-            auto clippedPolygon = clipSutherlandHodgman({input[i-2], input[i-1], input[i]}, axises);
+            auto clippedPolygon = clipSutherlandHodgman({input[i-2].position, input[i-1].position, input[i].position}, axises);
 
             // TODO Triangulate clippedPolygon and push vertexes to output
         }
@@ -40,12 +40,12 @@ std::vector<Vector4> ClipEngine::clipVertexes(const std::vector<Vector4> &vertex
     return output;
 }
 
-bool ClipEngine::isInsideClippingSquare(Vector4 vertex, const std::vector<size_t> &axises) {
+bool ClipEngine::isInsideClippingSquare(Vector4 vertex, const std::vector<size_t> &axises) const {
     double w = vertex.w();
     return vertex[axises[0]] > w && vertex[axises[0]] < -w && vertex[axises[1]] > w && vertex[axises[1]] < -w;
 }
 
-Vector4 ClipEngine::getIntersection(Vector4 vertexA, Vector4 vertexB, Vector4 planeA, Vector4 planeB, const std::vector<size_t> &axises) {
+Vector4 ClipEngine::getIntersection(Vector4 vertexA, Vector4 vertexB, Vector4 planeA, Vector4 planeB, const std::vector<size_t> &axises) const {
     Vector4 intersection;
 
     // TODO How to calculate intersection when vertexA.w() != vertexB.w() ?
@@ -53,7 +53,7 @@ Vector4 ClipEngine::getIntersection(Vector4 vertexA, Vector4 vertexB, Vector4 pl
     return intersection;
 }
 
-std::vector<Vector4> ClipEngine::clipSutherlandHodgman(const std::vector<Vector4> &polygon, const std::vector<size_t> &axises) {
+std::vector<Vector4> ClipEngine::clipSutherlandHodgman(const std::vector<Vector4> &polygon, const std::vector<size_t> &axises) const {
     std::vector<Vector4> input, output = polygon;
     const size_t planes[] = {0, 1, 3, 2}; // 00, 01, 11, 10
 

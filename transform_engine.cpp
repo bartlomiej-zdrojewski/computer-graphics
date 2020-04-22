@@ -11,12 +11,12 @@ TransformEngine::TransformEngine() {
     zFar = 100;
 }
 
-void TransformEngine::loadModelFromVertexArray(std::vector<Vector4> &vertexArray) {
+void TransformEngine::loadModelFromVertexArray(std::vector<Vertex> &vertexArray) {
     modelVertexes.insert(modelVertexes.end(), vertexArray.begin(), vertexArray.end());
 }
 
 bool TransformEngine::loadModelFromBuffer(const std::string &buffer) {
-    std::vector<Vector4> vertexArray;
+    std::vector<Vertex> vertexArray;
     std::stringstream stream(buffer);
     std::string lineBuffer;
 
@@ -36,16 +36,25 @@ bool TransformEngine::loadModelFromBuffer(const std::string &buffer) {
             continue;
         }
 
-        Vector4 vertex;
+        Vertex vertex;
         std::stringstream lineStream(lineBuffer);
 
-        lineStream >> vertex.x();
-        lineStream >> vertex.y();
-        lineStream >> vertex.z();
-        vertex.w() = 1;
+        lineStream >> vertex.position.x();
+        lineStream >> vertex.position.y();
+        lineStream >> vertex.position.z();
+        vertex.position.w() = 1;
 
         if (lineStream.fail()) {
             return false;
+        }
+
+        lineStream >> vertex.color.x();
+        lineStream >> vertex.color.y();
+        lineStream >> vertex.color.z();
+        vertex.color.w() = 1;
+
+        if (lineStream.fail()) {
+            vertex.color = Vector4(1, 1, 1, 1);
         }
 
         vertexArray.push_back(vertex);
@@ -72,11 +81,11 @@ void TransformEngine::clearModel() {
     modelVertexes.clear();
 }
 
-double TransformEngine::getViewWidth() {
+double TransformEngine::getViewWidth() const {
     return viewWidth;
 }
 
-double TransformEngine::getViewHeight() {
+double TransformEngine::getViewHeight() const {
     return viewHeight;
 }
 
@@ -135,33 +144,37 @@ void TransformEngine::run() {
         return;
     }
 
+    for (size_t i = 0; i < transformedVertexes.size(); ++i) {
+        transformedVertexes[i].color = modelVertexes[i].color;
+    }
+
     Matrix4x4 transformMatrix = getPerspectiveMatrix(fovy, zNear, zFar, viewWidth / viewHeight) *
-        getRotationMatrix(viewRotation.x(), viewRotation.y(), viewRotation.z()) *
-        getTranslationMatrix(viewTranslation.x(), viewTranslation.y(), viewTranslation.z());
+        getRotationMatrix(viewRotation.cx(), viewRotation.cy(), viewRotation.cz()) *
+        getTranslationMatrix(viewTranslation.cx(), viewTranslation.cy(), viewTranslation.cz());
 
     for (size_t i = 0; i < transformedVertexes.size(); ++i) {
-        transformedVertexes[i] = transformMatrix * modelVertexes[i];
+        transformedVertexes[i].position = transformMatrix * modelVertexes[i].position;
     }
 
     for (size_t i = 0; i < transformedVertexes.size(); ++i) {
-        transformedVertexes[i] = transformMatrix * modelVertexes[i];
+        transformedVertexes[i].position = transformMatrix * modelVertexes[i].position;
     }
 
     transformedVertexes = clipEngine.clipVertexes(transformedVertexes);
 
     for (size_t i = 0; i < transformedVertexes.size(); ++i) {
         for (size_t j = 0; j < 4; ++j) {
-            transformedVertexes[i][j] /= transformedVertexes[i].w();
+            transformedVertexes[i].position[j] /= transformedVertexes[i].position.w();
         }
     }
 
     for (size_t i = 0; i < transformedVertexes.size(); ++i) {
-        transformedVertexes[i].x() = (1 + transformedVertexes[i].x()) * viewWidth / 2;
-        transformedVertexes[i].y() = (1 + transformedVertexes[i].y()) * viewHeight / 2;
-        transformedVertexes[i].z() = (1 + transformedVertexes[i].z()) * (zFar - zNear) / 2;
+        transformedVertexes[i].position.x() = (1 + transformedVertexes[i].position.cx()) * viewWidth / 2;
+        transformedVertexes[i].position.y() = (1 + transformedVertexes[i].position.cy()) * viewHeight / 2;
+        transformedVertexes[i].position.z() = (1 + transformedVertexes[i].position.cz()) / 2;
     }
 }
 
-std::vector<Vector4> TransformEngine::getTransformedVertexes() const {
+const std::vector<Vertex>& TransformEngine::getTransformedVertexes() const {
     return transformedVertexes;
 }

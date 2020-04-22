@@ -3,19 +3,30 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include "transform_engine.h"
+#include "render_engine.h"
+
+enum RenderModes {
+    Points,
+    Lines,
+    Polygons
+};
 
 const double translationStep = 0.1;
 const double rotationStep = PI / 12;
 const double fovyStep = PI / 12;
+const auto renderMode = RenderModes::Polygons;
 
 void displayTransformEngineStatistics(TransformEngine &transformEngine, sf::RenderWindow &window, sf::Font &font);
 std::string getImageFileName();
 double toDegrees(double radians);
-sf::VertexArray toVertexArray(std::vector<Vector4> vertexes);
+sf::VertexArray toVertexArray(const std::vector<Vertex>& vertexes);
+sf::Texture toTexture(const std::vector<Vector4>& image, size_t width, size_t height);
 
 int main(int argc, char *argv[]) {
     TransformEngine transformEngine;
+    RenderEngine renderEngine;
     sf::VertexArray vertexArray;
+    sf::Texture texture;
     sf::Font font;
     std::string modelFilePath = argc > 1 ? argv[1] : "assets/cube.txt";
     std::string fontFilePath = argc > 2 ? argv[2] : "assets/font.ttf";
@@ -30,10 +41,19 @@ int main(int argc, char *argv[]) {
         shouldDisplayStatistics = false;
     }
 
+    // Move camera to (0,0,-5). It will be pointed at (0,0,0), so keep in mind that x axis will be inverted.
     transformEngine.setViewTranslation(0, 0, 5);
     transformEngine.run();
-
-    vertexArray = toVertexArray(transformEngine.getTransformedVertexes());
+    
+    renderEngine.setVertexArray(transformEngine.getTransformedVertexes());
+    renderEngine.setViewSize(transformEngine.getViewWidth(), transformEngine.getViewHeight());
+    renderEngine.run();
+    
+    if (renderMode == RenderModes::Polygons) {
+        vertexArray = toVertexArray(transformEngine.getTransformedVertexes());
+    } else {
+        texture = toTexture(renderEngine.getImage(), renderEngine.getViewWidth(), renderEngine.getViewHeight());
+    }
 
     sf::RenderWindow window(sf::VideoMode(transformEngine.getViewWidth(), transformEngine.getViewHeight()), "Computer Graphics");
     window.setFramerateLimit(60);
@@ -41,8 +61,9 @@ int main(int argc, char *argv[]) {
     while (window.isOpen())
     {
         sf::Event event;
-        while (window.pollEvent(event))
-        {
+        bool viewUpdated = false;
+
+        while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
                 window.close();
             }
@@ -50,18 +71,14 @@ int main(int argc, char *argv[]) {
             if (event.type == sf::Event::Resized) {
                 sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
                 window.setView(sf::View(visibleArea));
-                
                 transformEngine.setViewSize(event.size.width, event.size.height);
-                transformEngine.run();
-                
-                vertexArray = toVertexArray(transformEngine.getTransformedVertexes());
+                viewUpdated = true;
             }
 
             if (event.type == sf::Event::KeyPressed) {
                 auto viewTranslation = transformEngine.getViewTranslation();
                 auto viewRotation = transformEngine.getViewRotation();
                 auto fovy = transformEngine.getFovy();
-                bool viewUpdated = false;
 
                 if (event.key.code == sf::Keyboard::W) {
                     viewTranslation.x() += translationStep * cos(viewRotation.y() - PI / 2);
@@ -104,19 +121,31 @@ int main(int argc, char *argv[]) {
                     window.close();
                 }
 
-                if (viewUpdated) {
-                    transformEngine.setViewTranslation(viewTranslation);
-                    transformEngine.setViewRotation(viewRotation);
-                    transformEngine.setPerspective(fovy, transformEngine.getZNear(), transformEngine.getZFar());
-                    transformEngine.run();
+                transformEngine.setViewTranslation(viewTranslation);
+                transformEngine.setViewRotation(viewRotation);
+                transformEngine.setPerspective(fovy, transformEngine.getZNear(), transformEngine.getZFar());
+            }
+        }
 
-                    vertexArray = toVertexArray(transformEngine.getTransformedVertexes());
-                }
+        if (viewUpdated) {
+            transformEngine.run();
+
+            if (renderMode == RenderModes::Polygons) {
+                renderEngine.setVertexArray(transformEngine.getTransformedVertexes());
+                renderEngine.run();
+                texture = toTexture(renderEngine.getImage(), renderEngine.getViewWidth(), renderEngine.getViewHeight());
+            } else {
+                vertexArray = toVertexArray(transformEngine.getTransformedVertexes());
             }
         }
 
         window.clear();
-        window.draw(vertexArray);
+        
+        if (renderMode == RenderModes::Polygons) {
+            window.draw(sf::Sprite(texture));
+        } else {
+            window.draw(vertexArray);
+        }
 
         if (shouldDisplayStatistics) {
             displayTransformEngineStatistics(transformEngine, window, font);
@@ -134,9 +163,9 @@ void displayTransformEngineStatistics(TransformEngine &transformEngine, sf::Rend
 
     auto translation = transformEngine.getViewTranslation();
     auto rotationDegress = transformEngine.getViewRotation();
-    rotationDegress.x() = toDegrees(rotationDegress.x());
-    rotationDegress.y() = toDegrees(rotationDegress.y());
-    rotationDegress.z() = toDegrees(rotationDegress.z());
+    rotationDegress.x() = toDegrees(rotationDegress.cx());
+    rotationDegress.y() = toDegrees(rotationDegress.cy());
+    rotationDegress.z() = toDegrees(rotationDegress.cz());
 
     stream.precision(2);
     stream << std::fixed
@@ -179,19 +208,48 @@ double toDegrees(double radians) {
     return degrees;
 }
 
-sf::VertexArray toVertexArray(std::vector<Vector4> vertexes) {
-    sf::VertexArray vertexArray;    
-    vertexArray.setPrimitiveType(sf::PrimitiveType::Lines);
+sf::VertexArray toVertexArray(const std::vector<Vertex>& vertexes) {
+    sf::VertexArray vertexArray;
 
-    for (size_t i = 2; i < vertexes.size(); i = i + 3) {
-        for (size_t j = 0; j < 3; ++j) {
-            size_t va = (i-2) + j;
-            size_t vb = (i-2) + (j+1) % 3;
-
-            vertexArray.append(sf::Vertex(sf::Vector2f(vertexes[va].x(), vertexes[va].y()), sf::Color::White));
-            vertexArray.append(sf::Vertex(sf::Vector2f(vertexes[vb].x(), vertexes[vb].y()), sf::Color::White));
+    if (renderMode == RenderModes::Points) {
+        vertexArray.resize(vertexes.size());
+        vertexArray.setPrimitiveType(sf::PrimitiveType::Points);
+        for (size_t i = 0; i < vertexes.size(); ++i) {
+            sf::Vector2f position(vertexes[i].position.cx(), vertexes[i].position.cy());
+            sf::Color color(vertexes[i].color.cx() * 255, vertexes[i].color.cy() * 255, vertexes[i].color.cz() * 255, vertexes[i].color.cw() * 255);
+            vertexArray[i] = sf::Vertex(position, color);
+        }
+    } else if (renderMode == RenderModes::Lines) {
+        vertexArray.setPrimitiveType(sf::PrimitiveType::Lines);
+        for (size_t i = 2; i < vertexes.size(); i = i + 3) {
+            for (size_t j = 0; j < 3; ++j) {
+                const size_t va = (i-2) + j;
+                const size_t vb = (i-2) + (j+1) % 3;
+                vertexArray.append(sf::Vertex(sf::Vector2f(vertexes[va].position.cx(), vertexes[va].position.cy()),
+                    sf::Color(vertexes[va].color.cx() * 255, vertexes[va].color.cy() * 255, vertexes[va].color.cz() * 255, vertexes[va].color.cw() * 255)));
+                vertexArray.append(sf::Vertex(sf::Vector2f(vertexes[vb].position.cx(), vertexes[vb].position.cy()),
+                    sf::Color(vertexes[vb].color.cx() * 255, vertexes[vb].color.cy() * 255, vertexes[vb].color.cz() * 255, vertexes[vb].color.cw() * 255)));
+            }
         }
     }
     
     return vertexArray;
+}
+
+sf::Texture toTexture(const std::vector<Vector4>& image, size_t width, size_t height) {
+    sf::Image buffer;
+    sf::Texture texture;
+    
+    buffer.create(width, height);
+    
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x = 0; x < width; ++x) {
+            Vector4 pixel = image[y * width + x];
+            buffer.setPixel(x, y, sf::Color(pixel.cx() * 255, pixel.cy() * 255, pixel.cz() * 255, pixel.cw() * 255));
+        }
+    }
+
+    texture.loadFromImage(buffer);
+
+    return texture;
 }

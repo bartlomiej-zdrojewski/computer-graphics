@@ -10,8 +10,8 @@ public:
 
     Matrix4x4();
 
-    Matrix4x4 operator*(Matrix4x4 const &other) const;
-    Vector4 operator*(Vector4 &other) const;
+    Matrix4x4 operator*(const Matrix4x4 &other) const;
+    Vector4 operator*(const Vector4 &other) const;
 
     double get(size_t row, size_t column) const;
     void set(size_t row, size_t column, double value);

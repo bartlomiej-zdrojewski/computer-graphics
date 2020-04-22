@@ -10,13 +10,19 @@ public:
     Vector4(double x = 0, double y = 0, double z = 0, double w = 0);
 
     double& operator[](size_t const &i);
+    double c(size_t const &i) const;
 
     double& x();
     double& y();
     double& z();
     double& w();
 
-    std::string toString();
+    double cx() const;
+    double cy() const;
+    double cz() const;
+    double cw() const;
+
+    std::string toString() const;
 
 private:
 

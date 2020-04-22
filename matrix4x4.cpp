@@ -8,7 +8,7 @@ Matrix4x4::Matrix4x4() {
     }
 }
 
-Matrix4x4 Matrix4x4::operator*(Matrix4x4 const &other) const { 
+Matrix4x4 Matrix4x4::operator*(const Matrix4x4 &other) const { 
     Matrix4x4 result;
 
     for (size_t i = 0; i < 4; ++i) {
@@ -24,13 +24,13 @@ Matrix4x4 Matrix4x4::operator*(Matrix4x4 const &other) const {
     return result; 
 }
 
-Vector4 Matrix4x4::operator*(Vector4 &other) const {
+Vector4 Matrix4x4::operator*(const Vector4 &other) const {
     Vector4 result;
 
     for (size_t i = 0; i < 4; ++i) {
         result[i] = 0;
         for (size_t j = 0; j < 4; ++j) {
-            result[i] += get(i, j) * other[j];
+            result[i] += get(i, j) * other.c(j);
         }
     }
 

@@ -13,6 +13,10 @@ double& Vector4::operator[](size_t const &i) {
     return data[i];
 }
 
+double Vector4::c(size_t const &i) const {
+    return data[i];
+}
+
 double& Vector4::x() {
     return data[0];
 }
@@ -29,7 +33,23 @@ double& Vector4::w() {
     return data[3];
 }
 
-std::string Vector4::toString() {
+double Vector4::cx() const {
+    return data[0];
+}
+
+double Vector4::cy() const {
+    return data[1];
+}
+
+double Vector4::cz() const {
+    return data[2];
+}
+
+double Vector4::cw() const {
+    return data[3];
+}
+
+std::string Vector4::toString() const {
     std::ostringstream stream;
 
     for (size_t i = 0; i < 4; ++i) {
