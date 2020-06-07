@@ -85,3 +85,4 @@ The example file defining a 2x2x2 cube can be found in `assets/cube.txt`.
 MIT License, Copyright (c) 2020 Bartłomiej Zdrojewski
 
 See `LICENSE` file for details.
+

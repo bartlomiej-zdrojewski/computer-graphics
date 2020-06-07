@@ -1,0 +1,4 @@
+# Blue ambient light
+# (intensity, position, color)
+
+1 0 0 0 0 0 1

@@ -22,6 +22,9 @@ public:
     double cz() const;
     double cw() const;
 
+    double getLength() const;
+    void normalize();
+
     std::string toString() const;
 
 private:

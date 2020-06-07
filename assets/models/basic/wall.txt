@@ -1,4 +1,5 @@
-# Blank wall
+# Wall
+# (position)
 
 1 1 -1
 -1 1 -1

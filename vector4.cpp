@@ -1,5 +1,6 @@
-#include <sstream>
+#include <cmath>
 #include <iomanip>
+#include <sstream>
 #include "vector4.h"
 
 Vector4::Vector4(double x, double y, double z, double w) {
@@ -47,6 +48,28 @@ double Vector4::cz() const {
 
 double Vector4::cw() const {
     return data[3];
+}
+
+double Vector4::getLength() const {
+    double sumOfSquares = 0;
+
+    for (size_t i = 0; i < 4; ++i) {
+        sumOfSquares += data[i] * data[i];
+    }
+
+    return sqrt(sumOfSquares);
+}
+
+void Vector4::normalize() {
+    double length = getLength();
+
+    if (length == 0.0) {
+        return;
+    }
+    
+    for (size_t i = 0; i < 4; ++i) {
+        data[i] /= length;
+    }
 }
 
 std::string Vector4::toString() const {

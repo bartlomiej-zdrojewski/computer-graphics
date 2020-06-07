@@ -56,9 +56,8 @@ RenderEngine::RenderEngine() {
     backgroundColor = Vector4(0, 0, 0, 1);
 }
 
-void RenderEngine::setVertexArray(const std::vector<Vertex> &vertexArray) {
-    this->vertexArray.clear();
-    this->vertexArray.insert(this->vertexArray.end(), vertexArray.begin(), vertexArray.end());
+LightEngine& RenderEngine::getLightEngine() {
+    return lightEngine;
 }
 
 double RenderEngine::getViewWidth() const {
@@ -80,6 +79,11 @@ Vector4 RenderEngine::getBackgroundColor() const {
 
 void RenderEngine::setBackgroundColor(Vector4 backgroundColor) {
     this->backgroundColor = backgroundColor;
+}
+
+void RenderEngine::setVertexArray(const std::vector<Vertex> &vertexArray) {
+    this->vertexArray.clear();
+    this->vertexArray.insert(this->vertexArray.end(), vertexArray.begin(), vertexArray.end());
 }
 
 void RenderEngine::run() {
@@ -125,14 +129,17 @@ void RenderEngine::run() {
                 const auto ia = getIntersection(*(it->second[0]), y);
                 const auto ib = getIntersection(*(it->second[1]), y);
                 ranges.emplace_back(ia, ib, it->first);
-            } else {
+            } else if (!it->second.empty()) {
                 // TODO handle minor cases
             }
         }
 
+        // TODO sort ranges and update rangeBuffer as you go
+
         for (size_t x = 0; x < viewWidth; ++x) {
             std::vector<section*> rangeBuffer;
 
+            // TODO optimize
             for (size_t i = 0; i < ranges.size(); ++i) {
                 if (x >= ranges[i].getLeft() && x <= ranges[i].getRight()) {
                     rangeBuffer.push_back(&ranges[i]);
@@ -141,17 +148,11 @@ void RenderEngine::run() {
 
             if (rangeBuffer.empty()) {
                 image[y * viewWidth + x] = backgroundColor;
-            } else if (rangeBuffer.size() == 1) {
-                image[y * viewWidth + x] = getColor({
-                    vertexArray[3 * rangeBuffer[0]->primitive + 0],
-                    vertexArray[3 * rangeBuffer[0]->primitive + 1],
-                    vertexArray[3 * rangeBuffer[0]->primitive + 2]
-                }, Vector4(x, y)); ;
             } else {
                 size_t frontRange = 0;
                 double frontDistance = getInterpolation(rangeBuffer[0]->begin.cx(), rangeBuffer[0]->begin.cz(), rangeBuffer[0]->end.cx(), rangeBuffer[0]->end.cz(), x);
 
-                for (size_t i = 0; i < rangeBuffer.size(); ++i) {
+                for (size_t i = 1; i < rangeBuffer.size(); ++i) {
                     double distance = getInterpolation(rangeBuffer[i]->begin.cx(), rangeBuffer[i]->begin.cz(), rangeBuffer[i]->end.cx(), rangeBuffer[i]->end.cz(), x);
                     if (distance > frontDistance) {
                         frontRange = i;
@@ -159,11 +160,23 @@ void RenderEngine::run() {
                     }
                 }
 
-                image[y * viewWidth + x] = getColor({
-                    vertexArray[3 * rangeBuffer[frontRange]->primitive + 0],
-                    vertexArray[3 * rangeBuffer[frontRange]->primitive + 1],
-                    vertexArray[3 * rangeBuffer[frontRange]->primitive + 2]
-                }, Vector4(x, y));
+                const auto color = getGradientColor({
+                        vertexArray[3 * rangeBuffer[frontRange]->primitive + 0],
+                        vertexArray[3 * rangeBuffer[frontRange]->primitive + 1],
+                        vertexArray[3 * rangeBuffer[frontRange]->primitive + 2]
+                    }, Vector4(x, y));
+
+                const auto light = getLight({
+                        vertexArray[3 * rangeBuffer[frontRange]->primitive + 0],
+                        vertexArray[3 * rangeBuffer[frontRange]->primitive + 1],
+                        vertexArray[3 * rangeBuffer[frontRange]->primitive + 2]
+                    }, Vector4(x, y));
+                
+                image[y * viewWidth + x] = Vector4(
+                    light.cx() * color.cx(),
+                    light.cy() * color.cy(),
+                    light.cz() * color.cz(),
+                    light.cw() * color.cw());
             }
         }
     }
@@ -173,7 +186,77 @@ const std::vector<Vector4>& RenderEngine::getImage() {
     return image;
 }
 
-// TODO return gradient color
-Vector4 RenderEngine::getColor(std::vector<Vertex> vertexes, Vector4 position) {
-    return vertexes[0].color;
+Vector4 RenderEngine::getGradientColor(const std::vector<Vertex> &primitive, Vector4 position) {
+    Vector4 gradientColor;
+    std::vector <Vertex> referenceVertexes;
+
+    for (size_t i = 0; i < primitive.size(); ++i) {
+        auto topIndex = i;
+        auto bottomIndex = (i+1) % primitive.size();
+        auto top = primitive[topIndex].position.cy();
+        auto bottom = primitive[(i+1) % primitive.size()].position.cy();
+
+        if (top > bottom) {
+            std::swap(top, bottom);
+            std::swap(topIndex, bottomIndex);
+        }
+
+        if (position.cy() >= top && position.cy() <= bottom) {
+            Vertex vertex;
+            vertex.position.x() = getInterpolation(
+                primitive[i].position.cy(), primitive[i].position.cx(),
+                primitive[(i+1) % primitive.size()].position.cy(), primitive[(i+1) % primitive.size()].position.cx(),
+                position.cy());
+            vertex.position.y() = position.cy();
+
+            double alpha = (position.cy() - top) / (bottom - top);
+            alpha = std::min(std::max(alpha, 0.0), 1.0);
+
+            for (size_t i = 0; i < 4; ++i) {
+                vertex.color[i] = primitive[topIndex].color.c(i) + alpha * (primitive[bottomIndex].color.c(i) - primitive[topIndex].color.c(i));
+            }
+
+            referenceVertexes.push_back(vertex);
+        }
+    }
+    
+    if (referenceVertexes.size() != 2) {
+        if (referenceVertexes.empty()) {
+            return primitive[0].color;
+        } else {
+            return referenceVertexes[0].color;
+        }
+    }
+
+    auto leftIndex = 0;
+    auto rightIndex = 1;
+    auto left = referenceVertexes[leftIndex].position.cx();
+    auto right = referenceVertexes[rightIndex].position.cx();
+
+    if (left > right) {
+        std::swap(left, right);
+        std::swap(leftIndex, rightIndex);
+    }
+
+    double alpha = (position.cx() - left) / (right - left);
+    alpha = std::min(std::max(alpha, 0.0), 1.0);
+
+    for (size_t i = 0; i < 4; ++i) {
+        gradientColor[i] = referenceVertexes[leftIndex].color.c(i) + alpha * (referenceVertexes[rightIndex].color.c(i) - referenceVertexes[leftIndex].color.c(i));
+    }
+
+    return gradientColor;
+}
+
+Vector4 RenderEngine::getLight(const std::vector<Vertex> &primitive, Vector4 position) {
+    std::vector<Vertex> primitiveLight;
+    
+    for (size_t i = 0; i < primitive.size(); ++i) {
+        Vertex vertex;
+        vertex.position = primitive[i].position;
+        vertex.color = lightEngine.getLight(primitive[i].origin, primitive[i].normal);
+        primitiveLight.push_back(vertex);
+    }
+
+    return getGradientColor(primitiveLight, position);
 }

@@ -2,6 +2,7 @@
 #define RENDER_ENGINE_H
 
 #include <vector>
+#include "light_engine.h"
 #include "vertex.h"
 
 class RenderEngine {
@@ -9,8 +10,8 @@ class RenderEngine {
 public:
 
     RenderEngine();
-
-    void setVertexArray(const std::vector<Vertex> &vertexArray);
+    
+    LightEngine& getLightEngine();
 
     double getViewWidth() const;
     double getViewHeight() const;
@@ -19,14 +20,19 @@ public:
     Vector4 getBackgroundColor() const;
     void setBackgroundColor(Vector4 backgroundColor);
 
+    void setVertexArray(const std::vector<Vertex> &vertexArray);
+
     void run();
     const std::vector<Vector4>& getImage();
 
 private:
 
-    Vector4 getColor(std::vector<Vertex> vertexes, Vector4 position);
+    Vector4 getGradientColor(const std::vector<Vertex> &primitive, Vector4 position);
+    Vector4 getLight(const std::vector<Vertex> &primitive, Vector4 position);
 
 private:
+
+    LightEngine lightEngine;
 
     size_t viewWidth, viewHeight;
     Vector4 backgroundColor;

@@ -1,4 +1,5 @@
-# Blank cube
+# Cube
+# (position)
 
 ## Top wall
 

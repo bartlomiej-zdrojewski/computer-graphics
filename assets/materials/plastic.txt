@@ -1,0 +1,8 @@
+# Plastic
+# ambient, diffuse, specular, shininess, suppression
+
+0.0 0.0 0.0
+0.1 0.35 0.1
+0.45 0.55 0.45
+32.0
+1.0

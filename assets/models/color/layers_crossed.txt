@@ -1,4 +1,5 @@
 # Crossed layers
+# (position, color)
 
 ## Front red layer
 

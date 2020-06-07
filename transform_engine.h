@@ -12,10 +12,7 @@ public:
 
     TransformEngine();
 
-    void loadModelFromVertexArray(std::vector<Vertex> &vertexArray);
-    bool loadModelFromBuffer(const std::string &buffer);
-    bool loadModelFromFile(const std::string &filePath);
-    void clearModel();
+    ClipEngine& getClipEngine();    
 
     double getViewWidth() const;
     double getViewHeight() const;
@@ -33,6 +30,11 @@ public:
     double getZNear() const;
     double getZFar() const;
     void setPerspective(double fovy, double zNear, double zFar);
+
+    void loadModelFromVertexArray(std::vector<Vertex> &vertexArray);
+    bool loadModelFromBuffer(const std::string &buffer);
+    bool loadModelFromFile(const std::string &filePath);
+    void clearModel();
 
     void run();
     const std::vector<Vertex>& getTransformedVertexes() const;

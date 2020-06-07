@@ -1,0 +1,8 @@
+# Perl
+# ambient, diffuse, specular, shininess, suppression
+
+0.25 0.20725 0.20725 0.922
+1.0 0.829 0.829 0.922
+0.296648 0.296648 0.296648 0.922
+11.264
+1.0

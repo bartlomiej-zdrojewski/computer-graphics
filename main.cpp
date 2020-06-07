@@ -1,6 +1,6 @@
 #include <cmath>
-#include <sstream>
 #include <iostream>
+#include <sstream>
 #include <SFML/Graphics.hpp>
 #include "transform_engine.h"
 #include "render_engine.h"
@@ -28,8 +28,10 @@ int main(int argc, char *argv[]) {
     sf::VertexArray vertexArray;
     sf::Texture texture;
     sf::Font font;
-    std::string modelFilePath = argc > 1 ? argv[1] : "assets/cube.txt";
-    std::string fontFilePath = argc > 2 ? argv[2] : "assets/font.ttf";
+    std::string modelFilePath = argc > 1 ? argv[1] : "assets/models/color/triangle.txt";
+    std::string materialFilePath = argc > 2 ? argv[2] : "";
+    std::string lightSourcesFilePath = argc > 3 ? argv[3] : "";
+    std::string fontFilePath = argc > 4 ? argv[4] : "assets/fonts/inconsolata.ttf";
     bool shouldDisplayStatistics = true;
 
     if (!transformEngine.loadModelFromFile(modelFilePath)) {
@@ -37,16 +39,27 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    if (!renderEngine.getLightEngine().loadMaterialFromFile(materialFilePath)) {
+        std::cout << "Failed to load material \"" << materialFilePath << "\"" << std::endl;
+        return 2;
+    }
+
+    if (!renderEngine.getLightEngine().loadLightSourcesFromFile(lightSourcesFilePath)) {
+        std::cout << "Failed to load light sources \"" << lightSourcesFilePath << "\"" << std::endl;
+        return 3;
+    }
+
     if (!font.loadFromFile(fontFilePath)) {
         shouldDisplayStatistics = false;
     }
 
-    // Move camera to (0,0,-5). It will be pointed at (0,0,0), so keep in mind that x axis will be inverted.
+    // Moves camera to (0,0,-5). It will be pointed at (0,0,0), so keep in mind that X axis will be inverted.
     transformEngine.setViewTranslation(0, 0, 5);
     transformEngine.run();
     
     renderEngine.setVertexArray(transformEngine.getTransformedVertexes());
     renderEngine.setViewSize(transformEngine.getViewWidth(), transformEngine.getViewHeight());
+    renderEngine.getLightEngine().setViewTranslation(transformEngine.getViewTranslation());
     renderEngine.run();
     
     if (renderMode == RenderModes::Polygons) {
@@ -72,6 +85,7 @@ int main(int argc, char *argv[]) {
                 sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
                 window.setView(sf::View(visibleArea));
                 transformEngine.setViewSize(event.size.width, event.size.height);
+                renderEngine.setViewSize(transformEngine.getViewWidth(), transformEngine.getViewHeight());
                 viewUpdated = true;
             }
 
@@ -132,6 +146,7 @@ int main(int argc, char *argv[]) {
 
             if (renderMode == RenderModes::Polygons) {
                 renderEngine.setVertexArray(transformEngine.getTransformedVertexes());
+                renderEngine.getLightEngine().setViewTranslation(transformEngine.getViewTranslation());
                 renderEngine.run();
                 texture = toTexture(renderEngine.getImage(), renderEngine.getViewWidth(), renderEngine.getViewHeight());
             } else {

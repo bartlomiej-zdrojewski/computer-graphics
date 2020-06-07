@@ -1,4 +1,5 @@
-# Cube without front wall
+# Cube with no front wall
+# (position, color)
 
 ## Top wall
 

@@ -1,4 +1,5 @@
 # Cube
+# (position, color)
 
 ## Top wall
 
